@@ -6,6 +6,8 @@ from sklearn.linear_model import LinearRegression
 from datetime import datetime, timedelta
 from column_mapper import ColumnMapper
 
+from chatbot.chat_engine import ChatEngine
+
 st.set_page_config(page_title="Shop BI Assistant", layout="wide")
 
 
@@ -337,6 +339,27 @@ st.markdown("---")
 # Forecast
 st.subheader("🔮 Sales Forecast (Next 7 Days)")
 predictions, model, daily_df = predict_next_week(data)
+
+results = {
+    "metrics": {
+        "total_revenue": float(total_revenue),
+        "total_transactions": int(total_txns),
+        "avg_sale": float(avg_txn),
+        "top_product": best_product,
+        "date_start": str(data["Date"].min()),
+        "date_end": str(data["Date"].max())
+    },
+    "insights": insights,
+    "forecast": predictions
+}
+
+
+if "chat_engine" not in st.session_state:
+    st.session_state.chat_engine = ChatEngine()
+
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+    
 hist_data = daily_df[['date', 'Total']].tail(14).copy()
 hist_data.columns = ['Date', 'Sales']
 hist_data['Type'] = 'Actual'
@@ -361,13 +384,42 @@ forecast_table = pd.DataFrame([
 ])
 st.dataframe(forecast_table, use_container_width=True, hide_index=True)
 
-with st.expander("How We Predict (Click to expand)"):
-    st.markdown(f"""
-**PREDICTION METHOD: Linear Regression + Day Patterns**
-- Analyzed {len(daily_df)} days of data
-- Linear Regression trend: ₹{model.coef_[0]:+.0f} per day
-- Adjusted by day-of-week multipliers
-""")
+st.markdown("---")
+st.subheader("💬 Ask Questions About Your Data")
+
+# Show chat history
+for message in st.session_state.chat_history:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# User input
+user_question = st.chat_input("Ask about revenue, products, trends, dates...")
+
+if user_question:
+    # Store user message
+    st.session_state.chat_history.append({
+        "role": "user",
+        "content": user_question
+    })
+
+    with st.chat_message("user"):
+        st.markdown(user_question)
+
+    # Get assistant response (STRUCTURED ENGINE ONLY)
+    assistant_reply = st.session_state.chat_engine.answer_question(
+        question=user_question,
+        results=results,
+        data=data
+    )
+
+    # Store assistant response
+    st.session_state.chat_history.append({
+        "role": "assistant",
+        "content": assistant_reply
+    })
+
+    with st.chat_message("assistant"):
+        st.markdown(assistant_reply)
 
 # Raw Data
 with st.expander("📄 View Raw Data"):
