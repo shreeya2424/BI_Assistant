@@ -331,7 +331,7 @@ for i, insight in enumerate(insights):
 
 st.markdown("---")
 
-<<<<<<< HEAD
+
 # Forecast
 st.subheader("🔮 Sales Forecast (Next 7 Days)")
 predictions, model, daily_df = predict_next_week(data)
@@ -359,8 +359,7 @@ if "chat_history" not in st.session_state:
 hist_data = daily_df[['date', 'Total']].tail(14).copy()
 hist_data.columns = ['Date', 'Sales']
 hist_data['Type'] = 'Actual'
-=======
->>>>>>> 1fc66f0
+
 
 # =====================================================
 # SALES FORECAST
@@ -396,7 +395,7 @@ forecast_table = pd.DataFrame([
     for p in predictions
 ])
 
-<<<<<<< HEAD
+
 st.markdown("---")
 st.subheader("💬 Ask Questions About Your Data")
 
@@ -433,7 +432,7 @@ if user_question:
 
     with st.chat_message("assistant"):
         st.markdown(assistant_reply)
-=======
+
 st.dataframe(
     forecast_table,
     use_container_width=True,
@@ -446,7 +445,7 @@ st.markdown("---")
 # =====================================================
 # RAW DATA
 # =====================================================
->>>>>>> 1fc66f0
+
 
 with st.expander("📄 View Raw Data"):
 
