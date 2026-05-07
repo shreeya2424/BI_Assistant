@@ -12,7 +12,7 @@ import json
 # OPENROUTER CONFIG
 # =====================================================
 
-API_KEY = "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"
+API_KEY = "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"
 
 OPENROUTER_API_URL = (
     "https://openrouter.ai/api/v1/chat/completions"
