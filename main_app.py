@@ -3,12 +3,7 @@ import pandas as pd
 
 from column_mapper import ColumnMapper
 
-
-from chatbot.chat_engine import ChatEngine
-
-st.set_page_config(page_title="Shop BI Assistant", layout="wide")
-
-# Functions
+# Custom Functions
 from functions import (
     clean_uploaded_data,
     validate_data,
@@ -25,7 +20,6 @@ from charts import (
 )
 
 
-
 # =====================================================
 # PAGE CONFIG
 # =====================================================
@@ -37,7 +31,7 @@ st.set_page_config(
 
 
 # =====================================================
-# LOAD ML COLUMN MAPPER
+# LOAD COLUMN MAPPER
 # =====================================================
 
 @st.cache_resource
@@ -84,7 +78,7 @@ if uploaded_file is not None:
 
     try:
 
-        # Read uploaded file
+        # Try reading CSV using different encodings
         try:
 
             df = pd.read_csv(
@@ -110,7 +104,10 @@ if uploaded_file is not None:
             "✅ File uploaded successfully"
         )
 
-        # File info
+        # =====================================================
+        # FILE INFORMATION
+        # =====================================================
+
         with st.sidebar.expander(
             "📊 File Information",
             expanded=True
@@ -171,7 +168,7 @@ if uploaded_file is not None:
         )
 
         # =====================================================
-        # VALIDATION
+        # DATA VALIDATION
         # =====================================================
 
         errors = validate_data(df)
@@ -188,10 +185,21 @@ if uploaded_file is not None:
                     f"- {error}"
                 )
 
+            st.warning("""
+❌ Your uploaded dataset is missing required columns.
+
+Required Columns:
+- Date
+- Product
+- Quantity
+- Price
+- Total
+""")
+
             st.stop()
 
         # =====================================================
-        # CLEANING
+        # DATA CLEANING
         # =====================================================
 
         cleaned_data = clean_uploaded_data(df)
@@ -205,25 +213,71 @@ if uploaded_file is not None:
     except Exception as e:
 
         st.sidebar.error(
-            f"❌ Error: {e}"
+            f"❌ Error reading file: {e}"
         )
 
 else:
 
+    # Stop app if no file uploaded
     if st.session_state.data is None:
 
         st.info(
-            "⬅️ Upload a CSV file to begin"
+            "⬅️ Upload a CSV file from sidebar to begin"
         )
 
         st.stop()
 
 
 # =====================================================
-# MAIN DASHBOARD
+# LOAD DATA
 # =====================================================
 
 data = st.session_state.data
+
+
+# =====================================================
+# CALCULATE KPI METRICS
+# =====================================================
+
+total_revenue = data['Total'].sum()
+
+total_txns = len(data)
+
+avg_txn = data['Total'].mean()
+
+best_product = (
+    data.groupby('Product')['Total']
+    .sum()
+    .idxmax()
+)
+
+
+# =====================================================
+# RESULTS DICTIONARY
+# =====================================================
+
+results = {
+
+    "metrics": {
+
+        "total_revenue": float(total_revenue),
+
+        "total_transactions": int(total_txns),
+
+        "avg_sale": float(avg_txn),
+
+        "top_product": best_product,
+
+        "date_start": str(data["Date"].min()),
+
+        "date_end": str(data["Date"].max())
+    }
+}
+
+
+# =====================================================
+# MAIN DASHBOARD
+# =====================================================
 
 st.title("🏪 Shop BI Assistant")
 
@@ -235,24 +289,12 @@ st.markdown("---")
 
 
 # =====================================================
-# KPI METRICS
+# KPI SECTION
 # =====================================================
 
 st.subheader("📊 Key Metrics")
 
 col1, col2, col3, col4 = st.columns(4)
-
-total_revenue = data['Total'].sum()
-
-transactions = len(data)
-
-top_product = (
-    data.groupby('Product')['Total']
-    .sum()
-    .idxmax()
-)
-
-average_sale = data['Total'].mean()
 
 col1.metric(
     "Revenue",
@@ -261,17 +303,17 @@ col1.metric(
 
 col2.metric(
     "Transactions",
-    transactions
+    total_txns
 )
 
 col3.metric(
     "Top Product",
-    top_product
+    best_product
 )
 
 col4.metric(
     "Average Sale",
-    f"₹{average_sale:.0f}"
+    f"₹{avg_txn:.0f}"
 )
 
 st.markdown("---")
@@ -285,6 +327,7 @@ st.subheader("📈 Sales Analysis")
 
 col1, col2 = st.columns(2)
 
+# Sales Trend Chart
 with col1:
 
     sales_chart = (
@@ -296,6 +339,7 @@ with col1:
         use_container_width=True
     )
 
+# Top Products Chart
 with col2:
 
     product_chart = (
@@ -332,35 +376,6 @@ for i, insight in enumerate(insights):
 st.markdown("---")
 
 
-# Forecast
-st.subheader("🔮 Sales Forecast (Next 7 Days)")
-predictions, model, daily_df = predict_next_week(data)
-
-results = {
-    "metrics": {
-        "total_revenue": float(total_revenue),
-        "total_transactions": int(total_txns),
-        "avg_sale": float(avg_txn),
-        "top_product": best_product,
-        "date_start": str(data["Date"].min()),
-        "date_end": str(data["Date"].max())
-    },
-    "insights": insights,
-    "forecast": predictions
-}
-
-
-if "chat_engine" not in st.session_state:
-    st.session_state.chat_engine = ChatEngine()
-
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-    
-hist_data = daily_df[['date', 'Total']].tail(14).copy()
-hist_data.columns = ['Date', 'Sales']
-hist_data['Type'] = 'Actual'
-
-
 # =====================================================
 # SALES FORECAST
 # =====================================================
@@ -381,12 +396,18 @@ st.plotly_chart(
     use_container_width=True
 )
 
-# Forecast table
+
+# =====================================================
+# FORECAST TABLE
+# =====================================================
+
 forecast_table = pd.DataFrame([
 
     {
         'Date': p['date'].strftime('%d %b'),
+
         'Day': p['day'],
+
         'Predicted Sales': (
             f"₹{p['predicted']:,.0f}"
         )
@@ -394,44 +415,6 @@ forecast_table = pd.DataFrame([
 
     for p in predictions
 ])
-
-
-st.markdown("---")
-st.subheader("💬 Ask Questions About Your Data")
-
-# Show chat history
-for message in st.session_state.chat_history:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-# User input
-user_question = st.chat_input("Ask about revenue, products, trends, dates...")
-
-if user_question:
-    # Store user message
-    st.session_state.chat_history.append({
-        "role": "user",
-        "content": user_question
-    })
-
-    with st.chat_message("user"):
-        st.markdown(user_question)
-
-    # Get assistant response (STRUCTURED ENGINE ONLY)
-    assistant_reply = st.session_state.chat_engine.answer_question(
-        question=user_question,
-        results=results,
-        data=data
-    )
-
-    # Store assistant response
-    st.session_state.chat_history.append({
-        "role": "assistant",
-        "content": assistant_reply
-    })
-
-    with st.chat_message("assistant"):
-        st.markdown(assistant_reply)
 
 st.dataframe(
     forecast_table,
@@ -445,7 +428,6 @@ st.markdown("---")
 # =====================================================
 # RAW DATA
 # =====================================================
-
 
 with st.expander("📄 View Raw Data"):
 
