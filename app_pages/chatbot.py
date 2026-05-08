@@ -212,7 +212,7 @@ Examples:
 
         "Enter business context",
 
-        value=st.session_state.business_context,
+        value=st.session_state.get("business_context", ""),
 
         height=150,
 
