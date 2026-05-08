@@ -5,14 +5,13 @@
 import streamlit as st
 import pandas as pd
 import requests
-import json
 
 
 # =====================================================
 # OPENROUTER CONFIG
 # =====================================================
 
-API_KEY = "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"
+API_KEY = "YOUR_OPENROUTER_API_KEY"
 
 OPENROUTER_API_URL = (
     "https://openrouter.ai/api/v1/chat/completions"
@@ -30,17 +29,25 @@ MAX_ROWS_FOR_CONTEXT = 200
 
 
 # =====================================================
-# SESSION STATE
+# SAFE SESSION STATE INIT
 # =====================================================
 
-if "chat_messages" not in st.session_state:
-    st.session_state.chat_messages = []
+DEFAULT_STATES = {
 
-if "business_context" not in st.session_state:
-    st.session_state.business_context = " "
+    "chat_messages": [],
 
-if "chatbot_enabled" not in st.session_state:
-    st.session_state.chatbot_enabled = False
+    "business_context": "",
+
+    "chatbot_enabled": False,
+
+    "data": None
+}
+
+for key, value in DEFAULT_STATES.items():
+
+    if key not in st.session_state:
+
+        st.session_state[key] = value
 
 
 # =====================================================
@@ -73,6 +80,7 @@ def build_dataset_context(data):
     )
 
     return (
+
         shape_info
         + columns_info
         + dtypes_info
@@ -96,10 +104,10 @@ The user has uploaded business data.
 
 Your job:
 - Analyze business performance
-- Answer questions about sales, revenue, products, trends, forecasting
-- Give useful business recommendations
-- Explain insights clearly
-- Use business context when answering
+- Answer questions about sales
+- Explain trends
+- Give recommendations
+- Use business context
 
 BUSINESS CONTEXT:
 {business_context}
@@ -109,10 +117,9 @@ DATASET CONTEXT:
 
 Rules:
 - Be accurate
-- Be concise but useful
-- Use the uploaded dataset
-- If data is insufficient, clearly say so
-- Give actionable business insights
+- Be concise
+- Use uploaded dataset
+- Give actionable insights
 """
 
     return prompt
@@ -181,7 +188,9 @@ def show_chatbot():
     # CHECK DATA
     # =====================================================
 
-    if st.session_state.data is None:
+    data = st.session_state.get("data", None)
+
+    if data is None:
 
         st.warning(
             "⚠️ Please upload data first from Home page"
@@ -189,10 +198,8 @@ def show_chatbot():
 
         return
 
-    data = st.session_state.data
-
     # =====================================================
-    # BUSINESS CONTEXT INPUT
+    # BUSINESS CONTEXT
     # =====================================================
 
     st.subheader("🏢 Business Context")
@@ -200,30 +207,27 @@ def show_chatbot():
     st.markdown("""
 Describe the business so the AI can give
 better and more relevant answers.
-
-Examples:
-- We are a grocery store chain
-- We sell electronics online
-- We are a seasonal fashion business
-- Our target audience is college students
 """)
 
     business_context = st.text_area(
 
         "Enter business context",
 
-        value=st.session_state.get("business_context", ""),
+        value=st.session_state.get(
+            "business_context",
+            ""
+        ),
 
         height=150,
 
         placeholder=(
-            "Example: We are a bakery business "
-            "with 3 branches in Pune..."
+            "Example: We are a bakery "
+            "business with 3 branches..."
         )
     )
 
     # =====================================================
-    # LOAD CHATBOT BUTTON
+    # LOAD BUTTON
     # =====================================================
 
     if st.button("🚀 Load AI Assistant"):
@@ -236,11 +240,12 @@ Examples:
 
             return
 
-        st.session_state.business_context = (
+        st.session_state["business_context"] = (
+
             business_context
         )
 
-        st.session_state.chatbot_enabled = True
+        st.session_state["chatbot_enabled"] = True
 
         st.success(
             "✅ AI Assistant Loaded"
@@ -249,10 +254,13 @@ Examples:
     st.markdown("---")
 
     # =====================================================
-    # CHATBOT
+    # CHATBOT ENABLE CHECK
     # =====================================================
 
-    if not st.session_state.chatbot_enabled:
+    if not st.session_state.get(
+        "chatbot_enabled",
+        False
+    ):
 
         st.info(
             "Enter business context and "
@@ -282,7 +290,10 @@ Dataset:
     # CHAT HISTORY
     # =====================================================
 
-    for msg in st.session_state.chat_messages:
+    for msg in st.session_state.get(
+        "chat_messages",
+        []
+    ):
 
         with st.chat_message(msg["role"]):
 
@@ -298,8 +309,7 @@ Dataset:
 
     if user_prompt:
 
-        # Store user message
-        st.session_state.chat_messages.append({
+        st.session_state["chat_messages"].append({
 
             "role": "user",
 
@@ -309,10 +319,6 @@ Dataset:
         with st.chat_message("user"):
 
             st.markdown(user_prompt)
-
-        # =====================================================
-        # GENERATE RESPONSE
-        # =====================================================
 
         with st.chat_message("assistant"):
 
@@ -325,13 +331,18 @@ Dataset:
                     system_prompt = (
                         build_system_prompt(
                             data,
-                            st.session_state.business_context
+                            st.session_state.get(
+                                "business_context",
+                                ""
+                            )
                         )
                     )
 
                     response = call_openrouter(
 
-                        st.session_state.chat_messages,
+                        st.session_state[
+                            "chat_messages"
+                        ],
 
                         system_prompt
                     )
@@ -355,8 +366,9 @@ Dataset:
                         assistant_reply
                     )
 
-                    # Save assistant message
-                    st.session_state.chat_messages.append({
+                    st.session_state[
+                        "chat_messages"
+                    ].append({
 
                         "role": "assistant",
 
