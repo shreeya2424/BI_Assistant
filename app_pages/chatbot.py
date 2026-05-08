@@ -29,28 +29,6 @@ MAX_ROWS_FOR_CONTEXT = 200
 
 
 # =====================================================
-# SAFE SESSION STATE INIT
-# =====================================================
-
-DEFAULT_STATES = {
-
-    "chat_messages": [],
-
-    "business_context": "",
-
-    "chatbot_enabled": False,
-
-    "data": None
-}
-
-for key, value in DEFAULT_STATES.items():
-
-    if key not in st.session_state:
-
-        st.session_state[key] = value
-
-
-# =====================================================
 # BUILD DATASET CONTEXT
 # =====================================================
 
@@ -175,6 +153,21 @@ def call_openrouter(messages, system_prompt):
 # =====================================================
 
 def show_chatbot():
+
+    # =====================================================
+    # SAFE SESSION STATE INIT  ← FIXED: moved inside function
+    # =====================================================
+
+    defaults = {
+        "chat_messages": [],
+        "business_context": "",
+        "chatbot_enabled": False,
+        "data": None,
+    }
+
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
     st.title("🤖 AI Business Assistant")
 
