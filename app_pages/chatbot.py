@@ -37,7 +37,7 @@ if "chat_messages" not in st.session_state:
     st.session_state.chat_messages = []
 
 if "business_context" not in st.session_state:
-    st.session_state.business_context = ""
+    st.session_state.business_context = " "
 
 if "chatbot_enabled" not in st.session_state:
     st.session_state.chatbot_enabled = False

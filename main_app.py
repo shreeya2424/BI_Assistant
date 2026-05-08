@@ -7,6 +7,8 @@ import streamlit as st
 from app_pages.home import show_home
 from app_pages.dashboard import show_dashboard
 from app_pages.chatbot import show_chatbot
+from app_pages.how_we_process import show_how_we_process
+from app_pages.discover import show_discover
 
 
 # =====================================================
@@ -43,7 +45,9 @@ page = st.sidebar.radio(
     [
         "🏠 Home",
         "📊 Dashboard",
-        "🤖 AI Assistant"
+        "🤖 AI Assistant",
+        "⚙️ How we Process",
+        "📰 Discover More"
     ]
 )
 
@@ -60,3 +64,9 @@ elif page == "📊 Dashboard":
 
 elif page == "🤖 AI Assistant":
     show_chatbot()
+
+elif page == "⚙️ How we Process":
+    show_how_we_process()
+
+elif page == "📰 Discover More":
+    show_discover()
